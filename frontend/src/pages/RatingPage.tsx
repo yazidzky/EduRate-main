@@ -587,7 +587,7 @@ const RatingPage = () => {
 
         {/* Progress Indicator */}
         <div className="mb-8">
-          <div className="flex justify-between mb-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
             {steps.map((step, index) => (
               <motion.div
                 key={step}
@@ -597,7 +597,7 @@ const RatingPage = () => {
                 className="flex-1 text-center"
               >
                 <div
-                  className={`w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center font-bold ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full mx-auto mb-1 sm:mb-2 flex items-center justify-center font-bold ${
                     index <= currentStep
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
@@ -606,7 +606,7 @@ const RatingPage = () => {
                   {index + 1}
                 </div>
                 <p
-                  className={`text-sm ${
+                  className={`hidden sm:block sm:text-sm text-xs ${
                     index <= currentStep
                       ? "text-foreground font-medium"
                       : "text-muted-foreground"
@@ -637,9 +637,9 @@ const RatingPage = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3 }}
-              className="bg-card rounded-xl p-8 shadow-soft border border-border"
+              className="bg-card rounded-xl p-4 sm:p-8 shadow-soft border border-border"
             >
-              <h2 className="text-2xl font-bold text-foreground mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">
                 {steps[currentStep]} Evaluation
               </h2>
               <div className="space-y-6">
@@ -651,7 +651,7 @@ const RatingPage = () => {
                     transition={{ delay: index * 0.1 }}
                     className="p-4 bg-muted/30 rounded-lg"
                   >
-                    <p className="text-foreground mb-3 font-medium">
+                    <p className="text-foreground mb-3 font-medium text-sm sm:text-base">
                       {question.text}
                     </p>
                     <StarRating
@@ -672,13 +672,13 @@ const RatingPage = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3 }}
-              className="bg-card rounded-xl p-8 shadow-soft border border-border"
+              className="bg-card rounded-xl p-4 sm:p-8 shadow-soft border border-border"
             >
-              <h2 className="text-2xl font-bold text-foreground mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">
                 Review & Comment
               </h2>
               <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   {steps.slice(0, 3).map((step, index) => {
                     const stepQuestions = questions.slice(
                       index * questionsPerStep,
@@ -722,23 +722,23 @@ const RatingPage = () => {
         </AnimatePresence>
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 mt-8">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentStep === 0}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
           {currentStep < steps.length - 1 ? (
-            <Button onClick={handleNext} className="gap-2">
+            <Button onClick={handleNext} className="gap-2 w-full sm:w-auto">
               Next
               <ArrowRight className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} className="gap-2">
+            <Button onClick={handleSubmit} className="gap-2 w-full sm:w-auto">
               Submit Rating
               <CheckCircle2 className="w-4 h-4" />
             </Button>
