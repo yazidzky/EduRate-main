@@ -26,7 +26,7 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-import { User, Mail, Phone, Building, Upload, Save } from "lucide-react";
+import { User, Mail, Phone, Building, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const ProfilePage = () => {
@@ -78,17 +78,7 @@ const ProfilePage = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // Implement updateProfile function to send avatar to backend
-        toast.success("Profile picture updated!");
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  
 
   const [spiderData, setSpiderData] = useState<{
     labels: string[];
@@ -644,19 +634,6 @@ const ProfilePage = () => {
                     user?.name.charAt(0)
                   )}
                 </div>
-                <label
-                  htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 p-2 bg-primary rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  <Upload className="w-4 h-4 text-white" />
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                </label>
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-1">
                 {user?.name}
