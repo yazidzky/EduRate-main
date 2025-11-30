@@ -1,4 +1,4 @@
-### 📚 EDURATE
+## 📚 EDURATE
 
 ## 🎯 OVERVIEW
 **EduRate** adalah platform rating dan review untuk institusi pendidikan yang memungkinkan mahasiswa memberikan penilaian terhadap dosen dan mata kuliah.
