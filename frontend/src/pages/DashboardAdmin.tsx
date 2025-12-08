@@ -110,6 +110,20 @@ const DashboardAdmin = () => {
     ],
   };
 
+  const avgOverall = (() => {
+    const a = stats?.averageRatings || {};
+    const vals = [
+      a?.avgCommunication,
+      a?.avgCollaboration,
+      a?.avgEthics,
+      a?.avgResponsibility,
+      a?.avgProblemSolving,
+    ]
+      .map((v: any) => Number(v) || 0);
+    const sum = vals.reduce((p: number, c: number) => p + c, 0);
+    return vals.some((v) => v > 0) ? sum / vals.length : 0;
+  })();
+
   const meetingTrendData = {
     labels: meetingTrend.map((d) => d.label),
     datasets: [
@@ -166,7 +180,9 @@ const DashboardAdmin = () => {
           <StatCard
             title="Avg Rating"
             value={
-              stats?.averageRatings?.avgTeachingRating?.toFixed(1) || "0.0"
+              (Number.isFinite(Number(stats?.averageRatings?.avgTeachingRating))
+                ? Number(stats?.averageRatings?.avgTeachingRating).toFixed(1)
+                : avgOverall.toFixed(1)) || "0.0"
             }
             icon={TrendingUp}
             trend={`${Number(stats?.avgDeltaMonth || 0) > 0 ? "+" : ""}${Number(stats?.avgDeltaMonth || 0).toFixed(1)} dari bulan lalu`}

@@ -44,12 +44,13 @@ const UserManagement = () => {
   const [editEmail, setEditEmail] = useState("");
   const [editDepartment, setEditDepartment] = useState("");
   const [editRole, setEditRole] = useState<"dosen" | "mahasiswa" | "admin" | "">("");
+  const [editPassword, setEditPassword] = useState("");
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const data = await fetchJson("/api/users");
+        const data = await fetchJson("/api/users?limit=1000");
         setAllUsers(data?.success ? data.data : []);
       } catch {
         setError("Failed to load users");
@@ -98,7 +99,7 @@ const UserManagement = () => {
         setNewPassword("");
         setNewDepartment("");
         setNewRole("");
-        const data = await fetchJson("/api/users");
+        const data = await fetchJson("/api/users?limit=1000");
         setAllUsers(data?.success ? data.data : []);
       } else {
         toast.error(res?.message || "Gagal menambahkan user");
@@ -124,7 +125,7 @@ const UserManagement = () => {
 
         toast.success("User berhasil dihapus!");
         // Refresh users list
-        const data = await fetchJson("/api/users");
+        const data = await fetchJson("/api/users?limit=1000");
         setAllUsers(data?.success ? data.data : []);
       } catch {
         toast.error("Failed to delete user");
@@ -163,10 +164,21 @@ const UserManagement = () => {
         toast.error(res?.message || "Gagal mengupdate user");
         return;
       }
+      if (editPassword) {
+        const passRes = await fetchJson(`/api/users/${editingUser._id}/password`, {
+          method: "PUT",
+          body: { newPassword: editPassword },
+        });
+        if (!passRes?.success) {
+          toast.error(passRes?.message || "Gagal mengubah password user");
+          return;
+        }
+      }
       toast.success("User berhasil diupdate!");
       setIsEditDialogOpen(false);
       setEditingUser(null);
-      const data = await fetchJson("/api/users");
+      setEditPassword("");
+      const data = await fetchJson("/api/users?limit=1000");
       setAllUsers(data?.success ? data.data : allUsers);
     } catch (e: any) {
       const data = e?.data;
@@ -467,6 +479,10 @@ const UserManagement = () => {
               <div>
                 <Label>Department</Label>
                 <Input value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)} />
+              </div>
+              <div>
+                <Label>Password Baru (opsional)</Label>
+                <Input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
               </div>
               <Button onClick={handleUpdateUser} className="w-full">Simpan</Button>
             </div>

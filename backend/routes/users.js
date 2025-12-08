@@ -243,9 +243,13 @@ router.put(
   "/:id/password",
   authenticate,
   [
-    body("currentPassword")
-      .notEmpty()
-      .withMessage("Current password is required"),
+    body("currentPassword").custom((value, { req }) => {
+      if (req.role === "admin") return true;
+      if (!value) {
+        throw new Error("Current password is required");
+      }
+      return true;
+    }),
     body("newPassword")
       .isLength({ min: 6 })
       .withMessage("New password must be at least 6 characters"),
@@ -271,12 +275,14 @@ router.put(
           .json({ success: false, message: "User not found" });
       }
 
-      // Verify current password
-      const isMatch = await user.comparePassword(currentPassword);
-      if (!isMatch) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Current password is incorrect" });
+      // Verify current password for non-admin users
+      if (req.role !== "admin") {
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Current password is incorrect" });
+        }
       }
 
       user.password = newPassword;

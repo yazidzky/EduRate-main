@@ -131,7 +131,20 @@ router.get("/dashboard", async (req, res) => {
       { $match: { deleted: false } },
       {
         $project: {
-          overall: { $round: [{ $avg: ["$ratings.teaching", "$ratings.discipline", "$ratings.attitude"] }, 0] },
+          overall: {
+            $round: [
+              {
+                $avg: [
+                  "$ratings.communication",
+                  "$ratings.collaboration",
+                  "$ratings.ethics",
+                  "$ratings.responsibility",
+                  "$ratings.problemSolving",
+                ],
+              },
+              0,
+            ],
+          },
         },
       },
       { $group: { _id: "$overall", count: { $sum: 1 } } },
@@ -151,7 +164,19 @@ router.get("/dashboard", async (req, res) => {
     ]);
     const avgMonthAdmin = await AdminReview.aggregate([
       { $match: { deleted: false, createdAt: { $gte: startMonth } } },
-      { $project: { overall: { $avg: ["$ratings.teaching", "$ratings.discipline", "$ratings.attitude"] } } },
+      {
+        $project: {
+          overall: {
+            $avg: [
+              "$ratings.communication",
+              "$ratings.collaboration",
+              "$ratings.ethics",
+              "$ratings.responsibility",
+              "$ratings.problemSolving",
+            ],
+          },
+        },
+      },
       { $group: { _id: null, avg: { $avg: "$overall" } } },
     ]);
     const avgPrevMonthRegular = await Review.aggregate([
@@ -161,7 +186,19 @@ router.get("/dashboard", async (req, res) => {
     ]);
     const avgPrevMonthAdmin = await AdminReview.aggregate([
       { $match: { deleted: false, createdAt: { $gte: startPrevMonth, $lte: endPrevMonth } } },
-      { $project: { overall: { $avg: ["$ratings.teaching", "$ratings.discipline", "$ratings.attitude"] } } },
+      {
+        $project: {
+          overall: {
+            $avg: [
+              "$ratings.communication",
+              "$ratings.collaboration",
+              "$ratings.ethics",
+              "$ratings.responsibility",
+              "$ratings.problemSolving",
+            ],
+          },
+        },
+      },
       { $group: { _id: null, avg: { $avg: "$overall" } } },
     ]);
     const avgMonth = (avgMonthRegular[0]?.avg || 0) + (avgMonthAdmin[0]?.avg || 0);
@@ -181,6 +218,15 @@ router.get("/dashboard", async (req, res) => {
       .sort({ avgRating: -1 })
       .limit(5);
 
+    const avgObj = avgRating[0] || {};
+    const avgTeachingRating = (
+      Number(avgObj.avgCommunication || 0) +
+      Number(avgObj.avgCollaboration || 0) +
+      Number(avgObj.avgEthics || 0) +
+      Number(avgObj.avgResponsibility || 0) +
+      Number(avgObj.avgProblemSolving || 0)
+    ) / 5;
+
     res.json({
       success: true,
       data: {
@@ -188,7 +234,7 @@ router.get("/dashboard", async (req, res) => {
         totalTeachers,
         totalUsers,
         totalInstitutions,
-        averageRatings: avgRating[0] || {},
+        averageRatings: { ...avgObj, avgTeachingRating },
         topRatedTeachers,
         newUsersToday,
         ratingsToday,

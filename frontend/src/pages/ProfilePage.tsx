@@ -150,6 +150,45 @@ const ProfilePage = () => {
     problemSolving: 0,
   });
 
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password minimal 6 karakter");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Konfirmasi password tidak cocok");
+      return;
+    }
+    try {
+      setPwdLoading(true);
+      const res = await fetchJson(`/api/users/${user?.id}/password`, {
+        method: "PUT",
+        body: { currentPassword, newPassword },
+      });
+      if (res?.success) {
+        toast.success("Password berhasil diubah");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        toast.error(res?.message || "Gagal mengubah password");
+      }
+    } catch (e: any) {
+      const data = e?.data;
+      const msg = data?.errors
+        ? data.errors.map((er: any) => er?.msg || er?.message).filter(Boolean).join(", ")
+        : e?.message;
+      toast.error(msg || "Gagal mengubah password");
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
   const teacherCombinedAvg = {
     communication:
       Math.round(
@@ -765,6 +804,49 @@ const ProfilePage = () => {
             </form>
           </motion.div>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mt-6 bg-card rounded-xl p-6 shadow-soft border border-border max-w-2xl"
+        >
+          <h3 className="text-2xl font-bold text-foreground mb-6">Ubah Password</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="current-password" className="mb-2">Password Saat Ini</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-password" className="mb-2">Password Baru</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="confirm-password" className="mb-2">Konfirmasi Password Baru</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button onClick={handleChangePassword} disabled={pwdLoading} className="gap-2">
+              {pwdLoading ? "Menyimpan..." : "Simpan Password"}
+            </Button>
+          </div>
+        </motion.div>
 
         {/* Performa Analitik: Mahasiswa (Bar) */}
         {user?.role === "mahasiswa" && (

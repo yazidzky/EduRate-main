@@ -110,12 +110,11 @@ const LoginPage = () => {
             className="mt-6 p-4 bg-muted/50 rounded-lg"
           >
             <p className="text-sm text-muted-foreground text-center mb-2">
-              Demo Login:
+              Akun Demo:
             </p>
             <div className="text-xs space-y-1 text-muted-foreground">
               <p>👨‍🏫 Dosen: NIP001 / password</p>
               <p>👨‍🎓 Mahasiswa: NIM001 / password</p>
-              <p>👨‍💼 Admin: ADMIN001 / password</p>
             </div>
           </motion.div>
         </div>
