@@ -36,6 +36,7 @@ const DashboardAdmin = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [, setLoading] = useState(true);
+  const [meetingTrend, setMeetingTrend] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -52,6 +53,21 @@ const DashboardAdmin = () => {
     };
 
     fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchAdminTrend = async () => {
+      try {
+        const me = await fetchJson(`/api/users/me`);
+        const uid = me?.data?._id || me?.data?.id || me?.data?.user?.id;
+        if (!uid) return;
+        const res = await fetchJson(`/api/admin-reviews/analysis/${uid}`);
+        const arr = Array.isArray(res?.data) ? res.data : res?.data?.data || [];
+        const trend = (arr || []).map((d: any) => ({ label: `Pert ${d.meetingNumber ?? d._id ?? 0}`, val: Math.round((((d.communication || 0) + (d.collaboration || 0) + (d.ethics || 0) + (d.responsibility || 0) + (d.problemSolving || 0)) / 5) * 100) / 100 }));
+        setMeetingTrend(trend);
+      } catch {}
+    };
+    fetchAdminTrend();
   }, []);
 
   const lineChartData = {
@@ -90,6 +106,19 @@ const DashboardAdmin = () => {
         label: "Rating Activity",
         data: stats?.ratingActivityWeek || [0, 0, 0, 0, 0, 0, 0],
         backgroundColor: "rgba(16, 185, 129, 0.8)",
+      },
+    ],
+  };
+
+  const meetingTrendData = {
+    labels: meetingTrend.map((d) => d.label),
+    datasets: [
+      {
+        label: "Avg per Pertemuan",
+        data: meetingTrend.map((d) => d.val),
+        borderColor: "rgb(16, 185, 129)",
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        tension: 0.4,
       },
     ],
   };
@@ -158,6 +187,21 @@ const DashboardAdmin = () => {
             </h3>
             <Line
               data={lineChartData}
+              options={{ responsive: true, maintainAspectRatio: true }}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="bg-card rounded-xl p-6 shadow-soft border border-border"
+          >
+            <h3 className="text-lg font-bold text-foreground mb-4">
+              Progress Rating per Pertemuan
+            </h3>
+            <Line
+              data={meetingTrendData}
               options={{ responsive: true, maintainAspectRatio: true }}
             />
           </motion.div>

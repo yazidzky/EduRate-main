@@ -5,6 +5,7 @@ const studentReviewSchema = new mongoose.Schema(
     from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+  meetingNumber: { type: Number, min: 1 },
   ratings: {
     communication: { type: Number, min: 1, max: 5 },
     collaboration: { type: Number, min: 1, max: 5 },
@@ -26,8 +27,8 @@ const studentReviewSchema = new mongoose.Schema(
 );
 
 studentReviewSchema.index(
-  { from: 1, to: 1 },
-  { unique: true, partialFilterExpression: { deleted: false }, name: "uniq_student_from_to_active" }
+  { from: 1, to: 1, meetingNumber: 1 },
+  { unique: true, partialFilterExpression: { deleted: false }, name: "uniq_student_from_to_meeting_active" }
 );
 
 export default mongoose.model("StudentReview", studentReviewSchema);

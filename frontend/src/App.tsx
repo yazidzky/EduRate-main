@@ -16,6 +16,7 @@ import KelaskuPage from "./pages/KelaskuPage";
 import UserManagement from "./pages/UserManagement";
 import KelasManagement from "./pages/KelasManagement";
 import EnrollmentManagement from "./pages/EnrollmentManagement";
+import MeetingAnalysisPage from "./pages/MeetingAnalysisPage";
 import DosenPage from "./pages/DosenPage";
 import NotFound from "./pages/NotFound";
 
@@ -96,6 +97,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["admin", "dosen"]}>
             <KelasManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/meeting-analysis"
+        element={
+          <ProtectedRoute allowedRoles={["dosen", "mahasiswa"]}>
+            <MeetingAnalysisPage />
           </ProtectedRoute>
         }
       />

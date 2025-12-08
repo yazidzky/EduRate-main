@@ -72,7 +72,7 @@ router.post(
     }
 
     try {
-      const { name, code, institution, department, teacher, description, schedule, room, semester } =
+      const { name, code, institution, department, teacher, description, schedule, room, semester, totalMeetings } =
         req.body;
       const enrolledStudents = Array.isArray(req.body.enrolledStudents) ? req.body.enrolledStudents : [];
 
@@ -86,6 +86,7 @@ router.post(
         schedule,
         room,
         semester,
+        totalMeetings,
       });
       await course.save();
 
@@ -120,13 +121,14 @@ router.post(
 
 router.put("/:id", authenticate, authorize("admin"), async (req, res) => {
   try {
-    const { name, code, department, teacher, description, schedule, room, semester, institution } = req.body;
+    const { name, code, department, teacher, description, schedule, room, semester, institution, totalMeetings } = req.body;
     const prev = await Course.findById(req.params.id);
     const update = { name, code, department, teacher, description };
     if (schedule !== undefined) update.schedule = schedule;
     if (room !== undefined) update.room = room;
     if (semester !== undefined) update.semester = semester;
     if (institution !== undefined) update.institution = institution;
+    if (totalMeetings !== undefined) update.totalMeetings = totalMeetings;
     const course = await Course.findByIdAndUpdate(
       req.params.id,
       update,

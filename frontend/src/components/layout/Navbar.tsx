@@ -46,6 +46,7 @@ export const Navbar = () => {
           { path: "/dashboard", label: "Dashboard", icon: Home },
           { path: "/kelasku", label: "Kelasku", icon: BookOpen },
           { path: "/dosen", label: "Dosen", icon: GraduationCap },
+          { path: "/meeting-analysis", label: "Analysis", icon: GraduationCap },
           { path: "/profile", label: "Profile", icon: User },
         ];
 
@@ -60,7 +61,7 @@ export const Navbar = () => {
             <span className="text-xl font-bold text-foreground">EduRate</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <div className="hidden md:flex items-center gap-3">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -93,15 +94,15 @@ export const Navbar = () => {
               </Button>
             </div>
 
-            <div className="md:hidden">
+            <div className="md:hidden flex">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 shrink-0">
                     <Menu className="w-5 h-5" />
                     Menu
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     return (

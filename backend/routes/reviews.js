@@ -13,13 +13,14 @@ router.get("/", async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const filter = { deleted: false };
-    if (req.query.teacher) filter.teacher = req.query.teacher;
-    if (req.query.course) filter.course = req.query.course;
-    if (req.query.user) filter.user = req.query.user;
-    if (req.query.toId && req.query.toRole === "dosen") {
-      filter.teacher = req.query.toId;
-    }
+  const filter = { deleted: false };
+  if (req.query.teacher) filter.teacher = req.query.teacher;
+  if (req.query.course) filter.course = req.query.course;
+  if (req.query.user) filter.user = req.query.user;
+    if (req.query.meetingNumber) filter.meetingNumber = parseInt(req.query.meetingNumber);
+  if (req.query.toId && req.query.toRole === "dosen") {
+    filter.teacher = req.query.toId;
+  }
 
     const reviews = await Review.find(filter)
       .populate("user", "role")
@@ -51,7 +52,7 @@ router.get("/", async (req, res) => {
 
 router.get("/summary", authenticate, async (req, res) => {
   try {
-    const { user, teacher, course, raterRole } = req.query;
+    const { user, teacher, course, raterRole, meetingNumber } = req.query;
     const match = { deleted: false };
     if (user && mongoose.Types.ObjectId.isValid(user)) {
       match.user = new mongoose.Types.ObjectId(user);
@@ -61,6 +62,10 @@ router.get("/summary", authenticate, async (req, res) => {
     }
     if (course && mongoose.Types.ObjectId.isValid(course)) {
       match.course = new mongoose.Types.ObjectId(course);
+    }
+    if (meetingNumber) {
+      const mn = parseInt(meetingNumber);
+      if (!isNaN(mn)) match.meetingNumber = mn;
     }
 
     const pipeline = [{ $match: match }];
@@ -157,6 +162,7 @@ router.post(
     body("ratings.problemSolving")
       .isInt({ min: 1, max: 5 })
       .withMessage("Problem Solving rating must be 1-5"),
+    body("meetingNumber").optional().isInt({ min: 1 }).withMessage("meetingNumber must be >= 1"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -165,13 +171,16 @@ router.post(
     }
 
     try {
-      const { teacher, course, ratings, comment } = req.body;
+      const { teacher, course, ratings, comment, meetingNumber } = req.body;
 
-      let review = await Review.findOne({ user: req.userId, teacher, deleted: false });
+      const findFilter = { user: req.userId, teacher, deleted: false };
+      if (meetingNumber) findFilter.meetingNumber = meetingNumber;
+      let review = await Review.findOne(findFilter);
       if (review) {
         review.ratings = ratings || review.ratings;
         if (comment !== undefined) review.comment = comment;
         if (course) review.course = course;
+        if (meetingNumber) review.meetingNumber = meetingNumber;
         await review.save();
         await review.populate("teacher");
         const avgRating = await calculateAverageRating(teacher);
@@ -180,7 +189,7 @@ router.post(
         return res.json({ success: true, message: "Review updated", data: review });
       }
 
-      review = new Review({ user: req.userId, teacher, course, ratings, comment });
+      review = new Review({ user: req.userId, teacher, course, ratings, comment, meetingNumber });
       await review.save();
       await review.populate("teacher");
 
@@ -194,6 +203,54 @@ router.post(
     }
   }
 );
+
+// Per-meeting analysis for a teacher
+router.get("/analysis/:targetId", async (req, res) => {
+  try {
+    const teacherId = req.params.targetId;
+    const course = req.query.course;
+    const raterRole = req.query.raterRole; // optional: 'mahasiswa' or 'dosen'
+    if (!mongoose.Types.ObjectId.isValid(teacherId)) {
+      return res.json({ success: true, data: [] });
+    }
+    const match = { teacher: new mongoose.Types.ObjectId(teacherId), deleted: false };
+    if (course && mongoose.Types.ObjectId.isValid(String(course))) {
+      match.course = new mongoose.Types.ObjectId(String(course));
+    }
+    const pipeline = [{ $match: match }];
+    if (raterRole === "mahasiswa" || raterRole === "dosen") {
+      pipeline.push(
+        {
+          $lookup: {
+            from: "users",
+            localField: "user",
+            foreignField: "_id",
+            as: "userDoc",
+          },
+        },
+        { $unwind: "$userDoc" },
+        { $match: { "userDoc.role": raterRole } }
+      );
+    }
+    pipeline.push({
+      $group: {
+        _id: "$meetingNumber",
+        meetingNumber: { $first: "$meetingNumber" },
+        communication: { $avg: "$ratings.communication" },
+        collaboration: { $avg: "$ratings.collaboration" },
+        ethics: { $avg: "$ratings.ethics" },
+        responsibility: { $avg: "$ratings.responsibility" },
+        problemSolving: { $avg: "$ratings.problemSolving" },
+        count: { $sum: 1 },
+      },
+    });
+    pipeline.push({ $sort: { meetingNumber: 1 } });
+    const results = await Review.aggregate(pipeline);
+    res.json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 router.put("/:id", authenticate, async (req, res) => {
   try {

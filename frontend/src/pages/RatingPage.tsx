@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
@@ -10,6 +10,7 @@ import { CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import fetchJson from "@/lib/fetchJson";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Question {
   id: string;
@@ -29,6 +30,22 @@ const RatingPage = () => {
   const [comment, setComment] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [toInput, setToInput] = useState("");
+  const [meetingNumber, setMeetingNumber] = useState<number | undefined>(undefined);
+  const [totalMeetings, setTotalMeetings] = useState<number>(12);
+
+  const courseId = searchParams.get("courseId") || undefined;
+  useEffect(() => {
+    const fetchTotal = async () => {
+      try {
+        if (courseId) {
+          const res = await fetchJson(`/api/courses/${courseId}`);
+          const tm = res?.data?.totalMeetings || res?.data?.data?.totalMeetings;
+          if (tm && typeof tm === "number") setTotalMeetings(tm);
+        }
+      } catch {}
+    };
+    fetchTotal();
+  }, [courseId]);
 
   const isMahasiswaRatingDosen = ratingType === "dosen" && user?.role === "mahasiswa";
   const isMahasiswaRatingMahasiswa = ratingType === "teman" && user?.role === "mahasiswa";
@@ -349,6 +366,10 @@ const RatingPage = () => {
   };
 
   const handleSubmit = () => {
+    if (!meetingNumber) {
+      toast.error("Pilih pertemuan terlebih dahulu");
+      return;
+    }
     const adminIdParam = searchParams.get("adminId");
     if (ratingType === "admin" && !adminIdParam) {
       toast.error("Admin tidak dipilih");
@@ -376,6 +397,7 @@ const RatingPage = () => {
                 problemSolving: avgByCat["Problem Solving"],
               },
               comment,
+              meetingNumber,
             },
           });
           if (!res?.success) {
@@ -415,6 +437,7 @@ const RatingPage = () => {
             body: {
               teacher: teacherId,
               course: courseId,
+              meetingNumber,
               ratings: {
                 communication: categoryAvg["Communication"],
                 collaboration: categoryAvg["Collaboration"],
@@ -469,6 +492,8 @@ const RatingPage = () => {
               method: "POST",
               body: {
                 to: toUserId,
+                meetingNumber,
+                ...(courseId ? { course: courseId } : {}),
                 teacherRatings: {
                   communication: tAvg["Communication"],
                   collaboration: tAvg["Collaboration"],
@@ -510,6 +535,8 @@ const RatingPage = () => {
             method: "POST",
             body: {
               to: toUserId,
+              meetingNumber,
+              ...(courseId ? { course: courseId } : {}),
               ratings: {
                 communication: categoryAvg["Communication"],
                 collaboration: categoryAvg["Collaboration"],
@@ -569,6 +596,26 @@ const RatingPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Meeting selector */}
+        <div className="mb-6 bg-card rounded-xl p-6 border border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-2">Pilih Pertemuan</h3>
+          <p className="text-sm text-muted-foreground mb-3">Tentukan pertemuan ke berapa yang dinilai.</p>
+          <Select
+            onValueChange={(v) => setMeetingNumber(parseInt(v))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pertemuan ke-?" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: totalMeetings }).map((_, i) => (
+                <SelectItem key={i + 1} value={`${i + 1}`}>Pertemuan ke-{i + 1}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!meetingNumber && (
+            <p className="text-xs text-muted-foreground mt-2">Belum memilih pertemuan.</p>
+          )}
+        </div>
         {ratingType === "teman" && !toParam && (
           <div className="mb-6 bg-card rounded-xl p-6 border border-border">
             <h3 className="text-lg font-semibold text-foreground mb-2">

@@ -19,6 +19,7 @@ router.post(
     body("ratings.ethics").isFloat({ min: 1, max: 5 }),
     body("ratings.responsibility").isFloat({ min: 1, max: 5 }),
     body("ratings.problemSolving").isFloat({ min: 1, max: 5 }),
+    body("meetingNumber").optional().isInt({ min: 1 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -27,21 +28,24 @@ router.post(
     }
 
     try {
-      const { to, ratings, comment } = req.body;
+      const { to, ratings, comment, meetingNumber } = req.body;
       const target = await User.findById(to).select("role deleted");
       if (!target || target.deleted || target.role !== "admin") {
         return res.status(404).json({ success: false, message: "Target admin not found" });
       }
 
-      const existing = await AdminReview.findOne({ from: req.userId, to, deleted: false });
+      const findFilter = { from: req.userId, to, deleted: false };
+      if (meetingNumber) findFilter.meetingNumber = meetingNumber;
+      const existing = await AdminReview.findOne(findFilter);
       if (existing) {
         existing.ratings = ratings;
         existing.comment = comment;
+        if (meetingNumber) existing.meetingNumber = meetingNumber;
         await existing.save();
         return res.json({ success: true, message: "Review updated", data: existing });
       }
 
-      const review = new AdminReview({ from: req.userId, to, ratings, comment });
+      const review = new AdminReview({ from: req.userId, to, ratings, comment, meetingNumber });
       await review.save();
       res.status(201).json({ success: true, message: "Review created", data: review });
     } catch (error) {
@@ -59,6 +63,7 @@ router.get("/", authenticate, authorize("admin"), async (req, res) => {
     const to = req.query.to;
     const filter = { deleted: false };
     if (to) filter.to = to;
+    if (req.query.meetingNumber) filter.meetingNumber = parseInt(req.query.meetingNumber);
 
     const reviewsRaw = await AdminReview.find(filter)
       .populate("from", "role")
@@ -84,6 +89,7 @@ router.get("/", authenticate, authorize("admin"), async (req, res) => {
 router.get("/summary", authenticate, authorize("admin"), async (req, res) => {
   try {
     const to = req.query.to;
+    const meetingNumber = req.query.meetingNumber;
     if (!to) {
       return res.status(400).json({ success: false, message: "Query 'to' is required" });
     }
@@ -91,8 +97,13 @@ router.get("/summary", authenticate, authorize("admin"), async (req, res) => {
       return res.json({ success: true, data: { communication: 0, collaboration: 0, ethics: 0, responsibility: 0, problemSolving: 0, count: 0 } });
     }
 
+    const match = { to: mongoose.Types.ObjectId(to), deleted: false };
+    if (meetingNumber) {
+      const mn = parseInt(String(meetingNumber));
+      if (!isNaN(mn)) match.meetingNumber = mn;
+    }
     const pipeline = [
-      { $match: { to: mongoose.Types.ObjectId(to), deleted: false } },
+      { $match: match },
       {
         $group: {
           _id: "$to",
@@ -109,6 +120,36 @@ router.get("/summary", authenticate, authorize("admin"), async (req, res) => {
     const result = await AdminReview.aggregate(pipeline);
     const summary = result[0] || { communication: 0, collaboration: 0, ethics: 0, responsibility: 0, problemSolving: 0, count: 0 };
     res.json({ success: true, data: summary });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Per-meeting analysis for admin peer reviews
+router.get("/analysis/:targetId", authenticate, authorize("admin"), async (req, res) => {
+  try {
+    const targetId = req.params.targetId;
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+      return res.json({ success: true, data: [] });
+    }
+    const pipeline = [
+      { $match: { to: new mongoose.Types.ObjectId(targetId), deleted: false } },
+      {
+        $group: {
+          _id: "$meetingNumber",
+          meetingNumber: { $first: "$meetingNumber" },
+          communication: { $avg: "$ratings.communication" },
+          collaboration: { $avg: "$ratings.collaboration" },
+          ethics: { $avg: "$ratings.ethics" },
+          responsibility: { $avg: "$ratings.responsibility" },
+          problemSolving: { $avg: "$ratings.problemSolving" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { meetingNumber: 1 } },
+    ];
+    const results = await AdminReview.aggregate(pipeline);
+    res.json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

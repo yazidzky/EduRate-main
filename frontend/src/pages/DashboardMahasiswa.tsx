@@ -10,6 +10,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import fetchJson from "@/lib/fetchJson";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
  
 
 const DashboardMahasiswa = () => {
@@ -24,6 +26,9 @@ const DashboardMahasiswa = () => {
   const [myRatings, setMyRatings] = useState<any[]>([]);
   const [spiderMode, setSpiderMode] = useState<"dosen" | "teman" | "gabungan">("dosen");
   const [kelasSearch, setKelasSearch] = useState("");
+  const [trendTeman, setTrendTeman] = useState<any[]>([]);
+  const [trendDosen, setTrendDosen] = useState<any[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>("");
 
 
   useEffect(() => {
@@ -70,6 +75,28 @@ const DashboardMahasiswa = () => {
 
     fetchData();
   }, [user?.id]);
+
+  useEffect(() => {
+    const fetchTrend = async () => {
+      if (!user?.id) return;
+      try {
+        const courseParam = selectedCourse && selectedCourse !== "ALL" ? `?course=${selectedCourse}` : "";
+        const resTeman = await fetchJson(`/api/student-reviews/analysis/${user.id}${courseParam}`);
+        const arrTeman = Array.isArray(resTeman?.data) ? resTeman.data : resTeman?.data?.data || [];
+        const teman = (arrTeman || []).map((d: any) => ({ meeting: d.meetingNumber ?? d._id ?? 0, overall: Math.round((((d.communication || 0) + (d.collaboration || 0) + (d.ethics || 0) + (d.responsibility || 0) + (d.problemSolving || 0)) / 5) * 100) / 100 }));
+        setTrendTeman(teman);
+        const sep = courseParam ? (courseParam.startsWith("?") ? "&" : "?") : "?";
+        const resDosen = await fetchJson(`/api/student-reviews/analysis/${user.id}${courseParam}${sep}metrics=teacher`);
+        const arrDosen = Array.isArray(resDosen?.data) ? resDosen.data : resDosen?.data?.data || [];
+        const dosen = (arrDosen || []).map((d: any) => ({ meeting: d.meetingNumber ?? d._id ?? 0, overall: Math.round((((d.communication || 0) + (d.collaboration || 0) + (d.ethics || 0) + (d.responsibility || 0) + (d.problemSolving || 0)) / 5) * 100) / 100 }));
+        setTrendDosen(dosen);
+      } catch {
+        setTrendTeman([]);
+        setTrendDosen([]);
+      }
+    };
+    fetchTrend();
+  }, [user?.id, selectedCourse]);
 
   const spiderData =
     spiderMode === "dosen"
@@ -267,6 +294,45 @@ const DashboardMahasiswa = () => {
             </>
           )}
         </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="bg-card rounded-xl p-6 shadow-soft border border-border"
+          >
+            <h3 className="text-xl font-bold text-foreground mb-4">Progress Rating per Pertemuan</h3>
+            <div className="mb-3">
+              <Select onValueChange={setSelectedCourse}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Kelas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Semua Kelas</SelectItem>
+                  {kelasList
+                    .filter((k: any) => k?._id)
+                    .map((k: any) => (
+                      <SelectItem key={String(k._id)} value={String(k._id)}>
+                        {k.name || "Tanpa Nama"}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div style={{ height: 280 }}>
+              <ResponsiveContainer>
+                <LineChart data={(trendTeman.length || trendDosen.length) ? trendTeman.map((t, i) => ({ meeting: t.meeting, Teman: t.overall, Dosen: (trendDosen[i]?.overall ?? undefined) })) : []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="meeting" />
+                  <YAxis domain={[0, 5]} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Teman" stroke="#0ea5e9" dot={false} />
+                  <Line type="monotone" dataKey="Dosen" stroke="#10b981" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: 20 }}

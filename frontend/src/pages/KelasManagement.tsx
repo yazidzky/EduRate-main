@@ -568,7 +568,7 @@ const KelasManagement = () => {
               <DialogHeader>
                 <DialogTitle>Tambah Kelas Baru</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1" aria-busy={savingAdd}>
+            <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1" aria-busy={savingAdd}>
                 <div>
                   <Label htmlFor="kelas-name">Nama Kelas</Label>
                   <Input id="kelas-name" placeholder="Masukkan nama kelas" />
@@ -596,6 +596,7 @@ const KelasManagement = () => {
                   <Label htmlFor="kelas-room">Ruangan</Label>
                   <Input id="kelas-room" placeholder="Contoh: Lab 301" />
                 </div>
+            
                 <div>
                   <Label htmlFor="kelas-institution">Institusi</Label>
                   <Select
@@ -861,6 +862,7 @@ const KelasManagement = () => {
               <Label htmlFor="edit-kelas-room">Ruangan</Label>
               <Input id="edit-kelas-room" defaultValue={editingCourse.room || ""} />
             </div>
+            
             <div>
               <Label>Institusi</Label>
               <Select

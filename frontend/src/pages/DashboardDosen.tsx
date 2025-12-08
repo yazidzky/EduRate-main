@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
@@ -9,8 +10,36 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import fetchJson from "@/lib/fetchJson";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 
-const DashboardDosen = () => {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any) {
+    console.error("DashboardDosen render error:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center py-12 text-red-500">Terjadi kesalahan saat memuat Dashboard Dosen</div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const DashboardDosenInner = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [kelasList, setKelasList] = useState<any[]>([]);
@@ -71,6 +100,8 @@ const DashboardDosen = () => {
   const [spiderMode, setSpiderMode] = useState<
     "dosen" | "mahasiswa" | "gabungan"
   >("dosen");
+  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  const [meetingTrend, setMeetingTrend] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -157,6 +188,25 @@ const DashboardDosen = () => {
           });
         }
         setRatings(allReviews);
+
+        if (teacherId) {
+          const courseParam = selectedCourse && selectedCourse !== "ALL" ? selectedCourse : "";
+          const analysisUrl = courseParam
+            ? `/api/reviews/analysis/${teacherId}?course=${courseParam}`
+            : `/api/reviews/analysis/${teacherId}`;
+          try {
+            const analysisRes = await fetchJson(analysisUrl);
+            const arr = Array.isArray(analysisRes?.data) ? analysisRes.data : analysisRes?.data?.data || [];
+            const trend = (arr || []).map((d: any) => ({
+              meeting: d.meetingNumber ?? d._id ?? 0,
+              overall: Math.round((((d.communication || 0) + (d.collaboration || 0) + (d.ethics || 0) + (d.responsibility || 0) + (d.problemSolving || 0)) / 5) * 100) / 100,
+              count: d.count || 0,
+            }));
+            setMeetingTrend(trend);
+          } catch {
+            setMeetingTrend([]);
+          }
+        }
 
         const sAll = summaryAllRes?.success
           ? summaryAllRes.data
@@ -303,7 +353,7 @@ const DashboardDosen = () => {
     if (user?.id) {
       fetchData();
     }
-  }, [user?.id, user?.name]);
+  }, [user?.id, user?.name, selectedCourse]);
 
   const combinedAvg = {
     communication:
@@ -358,14 +408,18 @@ const DashboardDosen = () => {
       : avgMahasiswa.count || avgDosen.count
       ? combinedAvg
       : avgAll;
+  const safeNumber = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
   const spiderData = {
     labels: ["Communication", "Collaboration", "Ethics", "Responsibility", "Problem Solving"],
     values: [
-      activeAvg.communication,
-      activeAvg.collaboration,
-      activeAvg.ethics,
-      activeAvg.responsibility,
-      activeAvg.problemSolving,
+      safeNumber(activeAvg.communication),
+      safeNumber(activeAvg.collaboration),
+      safeNumber(activeAvg.ethics),
+      safeNumber(activeAvg.responsibility),
+      safeNumber(activeAvg.problemSolving),
     ],
   };
 
@@ -501,7 +555,13 @@ const DashboardDosen = () => {
                 Gabungan
               </Button>
             </div>
-            <SpiderChart data={spiderData} percentage />
+            {Array.isArray(spiderData.values) &&
+            spiderData.values.length === spiderData.labels.length &&
+            spiderData.values.every((n) => Number.isFinite(n)) ? (
+              <SpiderChart data={spiderData} percentage />
+            ) : (
+              <div className="text-sm text-muted-foreground">Data tidak tersedia</div>
+            )}
             <div className="mt-4 grid grid-cols-2 gap-3">
               {percentList.map((item) => (
                 <div
@@ -528,6 +588,49 @@ const DashboardDosen = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </motion.div>
+
+          {/* Per-Meeting Trend */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="bg-card rounded-xl p-6 shadow-soft border border-border"
+          >
+            <h3 className="text-xl font-bold text-foreground mb-4">Progress Rating per Pertemuan</h3>
+            <div className="mb-3">
+              <Select onValueChange={setSelectedCourse}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Kelas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Semua Kelas</SelectItem>
+                  {kelasList
+                    .filter((k: any) => k?._id)
+                    .map((k: any) => (
+                      <SelectItem key={String(k._id)} value={String(k._id)}>
+                        {k.name || "Tanpa Nama"}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div style={{ height: 280 }}>
+              {Array.isArray(meetingTrend) && meetingTrend.length > 0 ? (
+                <ResponsiveContainer>
+                  <LineChart data={meetingTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="meeting" />
+                    <YAxis domain={[0, 5]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="overall" stroke="#10b981" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Belum ada data pertemuan</div>
+              )}
             </div>
           </motion.div>
 
@@ -595,5 +698,11 @@ const DashboardDosen = () => {
     </div>
   );
 };
+
+const DashboardDosen = () => (
+  <ErrorBoundary>
+    <DashboardDosenInner />
+  </ErrorBoundary>
+);
 
 export default DashboardDosen;

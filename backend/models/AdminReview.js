@@ -4,6 +4,7 @@ const adminReviewSchema = new mongoose.Schema(
   {
     from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    meetingNumber: { type: Number, min: 1 },
     ratings: {
       communication: { type: Number, min: 1, max: 5, required: true },
       collaboration: { type: Number, min: 1, max: 5, required: true },
@@ -17,6 +18,9 @@ const adminReviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-adminReviewSchema.index({ from: 1, to: 1 }, { unique: true });
+adminReviewSchema.index(
+  { from: 1, to: 1, meetingNumber: 1 },
+  { unique: true, partialFilterExpression: { deleted: false }, name: "uniq_admin_from_to_meeting_active" }
+);
 
 export default mongoose.model("AdminReview", adminReviewSchema);

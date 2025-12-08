@@ -242,7 +242,8 @@ const KelaskuPage = () => {
                                   (typeof student === "string"
                                     ? student
                                     : undefined);
-                                setPendingTarget({ type: "mahasiswa", toId });
+                                const courseId = kelas?._id || kelas?.id;
+                                setPendingTarget({ type: "mahasiswa", toId, courseId });
                                 setConfirmOpen(true);
                               }}
                               className="gap-2"
@@ -417,7 +418,7 @@ const KelaskuPage = () => {
                     navigate(url);
                   } else {
                     const url = t.toId
-                      ? `/rating?type=teman&to=${t.toId}`
+                      ? `/rating?type=teman&to=${t.toId}${t.courseId ? `&courseId=${t.courseId}` : ""}`
                       : "/rating?type=teman";
                     navigate(url);
                   }

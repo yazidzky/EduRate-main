@@ -16,6 +16,10 @@ const reviewSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
     },
+    meetingNumber: {
+      type: Number,
+      min: 1,
+    },
   ratings: {
       communication: {
         type: Number,
@@ -66,8 +70,8 @@ const reviewSchema = new mongoose.Schema(
 );
 
 reviewSchema.index(
-  { user: 1, teacher: 1 },
-  { unique: true, partialFilterExpression: { deleted: false }, name: "uniq_user_teacher_active" }
+  { user: 1, teacher: 1, meetingNumber: 1 },
+  { unique: true, partialFilterExpression: { deleted: false }, name: "uniq_user_teacher_meeting_active" }
 );
 
 export default mongoose.model("Review", reviewSchema);

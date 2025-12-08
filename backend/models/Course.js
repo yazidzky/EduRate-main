@@ -33,6 +33,11 @@ const courseSchema = new mongoose.Schema(
       default: 1,
       min: 1,
     },
+    totalMeetings: {
+      type: Number,
+      default: 12,
+      min: 1,
+    },
     enrolledStudents: [
       {
         type: mongoose.Schema.Types.ObjectId,

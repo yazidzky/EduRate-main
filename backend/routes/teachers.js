@@ -94,20 +94,16 @@ router.get("/:id/reviews", async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const reviews = await Review.find({
-      teacher: req.params.id,
-      deleted: false,
-    })
+    const filter = { teacher: req.params.id, deleted: false };
+    if (req.query.meetingNumber) filter.meetingNumber = parseInt(req.query.meetingNumber);
+    const reviews = await Review.find(filter)
       .populate("user", "name avatar")
       .populate("course", "name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    const total = await Review.countDocuments({
-      teacher: req.params.id,
-      deleted: false,
-    });
+    const total = await Review.countDocuments(filter);
 
     res.json({
       success: true,

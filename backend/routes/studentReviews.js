@@ -12,10 +12,11 @@ router.get("/", authenticate, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    const filter = { deleted: false };
-    if (req.query.from) filter.from = req.query.from;
-    if (req.query.to) filter.to = req.query.to;
-    if (req.query.course) filter.course = req.query.course;
+  const filter = { deleted: false };
+  if (req.query.from) filter.from = req.query.from;
+  if (req.query.to) filter.to = req.query.to;
+  if (req.query.course) filter.course = req.query.course;
+    if (req.query.meetingNumber) filter.meetingNumber = parseInt(req.query.meetingNumber);
 
     const reviewsRaw = await StudentReview.find(filter)
       .populate("from", "role")
@@ -51,6 +52,7 @@ router.post(
     body("teacherRatings.ethics").optional().isFloat({ min: 1, max: 5 }),
     body("teacherRatings.responsibility").optional().isFloat({ min: 1, max: 5 }),
     body("teacherRatings.problemSolving").optional().isFloat({ min: 1, max: 5 }),
+    body("meetingNumber").notEmpty().isInt({ min: 1 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -59,6 +61,7 @@ router.post(
     }
     try {
       const { to, ratings, teacherRatings, comment, course } = req.body;
+      const meetingNumber = parseInt(req.body.meetingNumber);
       const hasStudentRatings =
         ratings && (ratings.communication || ratings.collaboration || ratings.ethics || ratings.responsibility || ratings.problemSolving);
       const hasTeacherRatings = teacherRatings && (teacherRatings.communication || teacherRatings.collaboration || teacherRatings.ethics || teacherRatings.responsibility || teacherRatings.problemSolving);
@@ -69,12 +72,14 @@ router.post(
         return res.status(404).json({ success: false, message: "Target mahasiswa tidak ditemukan" });
       }
 
-      let existing = await StudentReview.findOne({ from: req.userId, to, deleted: false });
+      const findFilter = { from: req.userId, to, deleted: false, meetingNumber };
+      let existing = await StudentReview.findOne(findFilter);
       if (existing) {
         if (ratingsClean) existing.ratings = ratingsClean;
         if (teacherRatingsClean) existing.teacherRatings = teacherRatingsClean;
         if (comment !== undefined) existing.comment = comment;
         if (course) existing.course = course;
+        if (meetingNumber) existing.meetingNumber = meetingNumber;
         await existing.save();
         return res.json({ success: true, message: "Review diperbarui", data: existing });
       }
@@ -82,7 +87,7 @@ router.post(
       if (!ratingsClean && !teacherRatingsClean) {
         return res.status(400).json({ success: false, message: "Ratings tidak boleh kosong" });
       }
-      const review = new StudentReview({ from: req.userId, to, ratings: ratingsClean, teacherRatings: teacherRatingsClean, comment, course });
+      const review = new StudentReview({ from: req.userId, to, ratings: ratingsClean, teacherRatings: teacherRatingsClean, comment, course, meetingNumber });
       await review.save();
       res.status(201).json({ success: true, message: "Review dibuat", data: review });
     } catch (error) {
@@ -93,10 +98,14 @@ router.post(
 
 router.get("/summary", authenticate, async (req, res) => {
   try {
-    const { user, to, fromRole, metrics } = req.query;
+    const { user, to, fromRole, metrics, meetingNumber } = req.query;
     const match = { deleted: false };
     if (user && mongoose.Types.ObjectId.isValid(user)) match.from = new mongoose.Types.ObjectId(user);
     if (to && mongoose.Types.ObjectId.isValid(to)) match.to = new mongoose.Types.ObjectId(to);
+    if (meetingNumber) {
+      const mn = parseInt(meetingNumber);
+      if (!isNaN(mn)) match.meetingNumber = mn;
+    }
 
     const pipeline = [{ $match: match }];
 
@@ -147,6 +156,45 @@ router.get("/summary", authenticate, async (req, res) => {
         result[0] || { communication: 0, collaboration: 0, ethics: 0, responsibility: 0, problemSolving: 0, count: 0 };
       return res.json({ success: true, data });
     }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Per-meeting analysis for student reviews (target = to)
+router.get("/analysis/:targetId", authenticate, async (req, res) => {
+  try {
+    const targetId = req.params.targetId;
+    const course = req.query.course;
+    const metrics = req.query.metrics; // "teacher" to use teacherRatings, otherwise ratings
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+      return res.json({ success: true, data: [] });
+    }
+    const match = { to: new mongoose.Types.ObjectId(targetId), deleted: false };
+    if (course && mongoose.Types.ObjectId.isValid(String(course))) {
+      match.course = new mongoose.Types.ObjectId(String(course));
+    }
+    const groupStage = {
+      _id: "$meetingNumber",
+      meetingNumber: { $first: "$meetingNumber" },
+      count: { $sum: 1 },
+    };
+    if (metrics === "teacher") {
+      groupStage.communication = { $avg: "$teacherRatings.communication" };
+      groupStage.collaboration = { $avg: "$teacherRatings.collaboration" };
+      groupStage.ethics = { $avg: "$teacherRatings.ethics" };
+      groupStage.responsibility = { $avg: "$teacherRatings.responsibility" };
+      groupStage.problemSolving = { $avg: "$teacherRatings.problemSolving" };
+    } else {
+      groupStage.communication = { $avg: "$ratings.communication" };
+      groupStage.collaboration = { $avg: "$ratings.collaboration" };
+      groupStage.ethics = { $avg: "$ratings.ethics" };
+      groupStage.responsibility = { $avg: "$ratings.responsibility" };
+      groupStage.problemSolving = { $avg: "$ratings.problemSolving" };
+    }
+    const pipeline = [{ $match: match }, { $group: groupStage }, { $sort: { meetingNumber: 1 } }];
+    const results = await StudentReview.aggregate(pipeline);
+    res.json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
