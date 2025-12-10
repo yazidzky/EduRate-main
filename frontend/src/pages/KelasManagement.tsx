@@ -56,7 +56,7 @@ const KelasManagement = () => {
           fetchJson("/api/courses"),
           fetchJson("/api/institutions"),
           fetchJson("/api/teachers"),
-          fetchJson("/api/users"),
+          fetchJson("/api/users?role=mahasiswa&limit=100000"),
         ]);
 
         setCourses(coursesData?.success ? coursesData.data : []);
@@ -181,6 +181,7 @@ const KelasManagement = () => {
         institution = createInst.data?._id || createInst.data?.id || createInst?.data;
       }
 
+      const totalMeetingsVal = (document.getElementById("kelas-totalMeetings") as HTMLInputElement)?.value;
       const courseData = {
         name,
         code,
@@ -190,6 +191,7 @@ const KelasManagement = () => {
         room,
         teacher: teacherFinal || undefined,
         enrolledStudents: selectedToEnroll,
+        totalMeetings: totalMeetingsVal ? parseInt(totalMeetingsVal) : undefined,
       };
 
       const response = await fetchJson("/api/courses", {
@@ -218,7 +220,7 @@ const KelasManagement = () => {
             if (newSid) {
             selectedToEnroll.push(newSid);
             }
-            const usersDataRefresh2 = await fetchJson("/api/users");
+            const usersDataRefresh2 = await fetchJson("/api/users?role=mahasiswa&limit=100000");
             setUsers(usersDataRefresh2?.success ? usersDataRefresh2.data : users);
           } else {
             toast.error(createStudent?.message || "Gagal membuat mahasiswa baru");
@@ -366,6 +368,7 @@ const KelasManagement = () => {
         institution = createInst.data?._id || createInst.data?.id || createInst?.data;
       }
 
+      const totalMeetingsEdit = (document.getElementById("edit-kelas-totalMeetings") as HTMLInputElement)?.value;
       const payload: any = {
         name,
         code,
@@ -377,6 +380,7 @@ const KelasManagement = () => {
         semester: parseInt(semester) || editingCourse?.semester || 1,
       };
       if (institution) payload.institution = institution;
+      if (totalMeetingsEdit) payload.totalMeetings = parseInt(totalMeetingsEdit);
 
       const res = await fetchJson(`/api/courses/${editingCourse._id}`, {
         method: "PUT",
@@ -413,7 +417,7 @@ const KelasManagement = () => {
         if (createStudent?.success) {
           const newSid = createStudent.data?._id || createStudent.data?.id || createStudent?.data;
           if (newSid) toAdd.push(newSid);
-          const usersDataRefresh3 = await fetchJson("/api/users");
+          const usersDataRefresh3 = await fetchJson("/api/users?role=mahasiswa&limit=100000");
           setUsers(usersDataRefresh3?.success ? usersDataRefresh3.data : users);
         } else {
           toast.error(createStudent?.message || "Gagal membuat mahasiswa baru");
@@ -595,6 +599,10 @@ const KelasManagement = () => {
                 <div>
                   <Label htmlFor="kelas-room">Ruangan</Label>
                   <Input id="kelas-room" placeholder="Contoh: Lab 301" />
+                </div>
+                <div>
+                  <Label htmlFor="kelas-totalMeetings">Jumlah Pertemuan</Label>
+                  <Input id="kelas-totalMeetings" type="number" placeholder="Misal: 16" />
                 </div>
             
                 <div>
@@ -861,6 +869,10 @@ const KelasManagement = () => {
             <div>
               <Label htmlFor="edit-kelas-room">Ruangan</Label>
               <Input id="edit-kelas-room" defaultValue={editingCourse.room || ""} />
+            </div>
+            <div>
+              <Label htmlFor="edit-kelas-totalMeetings">Jumlah Pertemuan</Label>
+              <Input id="edit-kelas-totalMeetings" type="number" defaultValue={editingCourse.totalMeetings || 12} />
             </div>
             
             <div>

@@ -2,6 +2,7 @@ import express from "express";
 import { body, validationResult } from "express-validator";
 import mongoose from "mongoose";
 import StudentReview from "../models/StudentReview.js";
+import Course from "../models/Course.js";
 import User from "../models/User.js";
 import { authenticate } from "../middlewares/auth.js";
 
@@ -70,6 +71,33 @@ router.post(
       const target = await User.findById(to).select("role deleted");
       if (!target || target.deleted || target.role !== "mahasiswa") {
         return res.status(404).json({ success: false, message: "Target mahasiswa tidak ditemukan" });
+      }
+
+      // Gate mahasiswa->mahasiswa ratings by course meeting configuration
+      if (ratingsClean && req.role === "mahasiswa") {
+        if (!course || !mongoose.Types.ObjectId.isValid(String(course))) {
+          return res.status(400).json({ success: false, message: "Course diperlukan untuk rating teman" });
+        }
+        const c = await Course.findById(String(course)).select("meetings totalMeetings deleted");
+        if (!c || c.deleted) {
+          return res.status(404).json({ success: false, message: "Course tidak ditemukan" });
+        }
+        const meeting = (c.meetings || []).find((m) => Number(m.number) === Number(meetingNumber));
+        if (!meeting || !meeting.ratingEnabled) {
+          return res.status(400).json({ success: false, message: "Pertemuan belum dibuat atau belum diaktifkan" });
+        }
+        const now = Date.now();
+        const start = meeting.startAt ? new Date(meeting.startAt).getTime() : undefined;
+        const end = meeting.endAt ? new Date(meeting.endAt).getTime() : undefined;
+        if (!start || !end) {
+          return res.status(400).json({ success: false, message: "Waktu rating belum ditetapkan" });
+        }
+        if (now < start) {
+          return res.status(400).json({ success: false, message: "Belum waktunya" });
+        }
+        if (now > end) {
+          return res.status(400).json({ success: false, message: "Waktu rating sudah berakhir" });
+        }
       }
 
       const findFilter = { from: req.userId, to, deleted: false, meetingNumber };

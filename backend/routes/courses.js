@@ -148,19 +148,7 @@ router.put("/:id", authenticate, authorize("admin"), async (req, res) => {
       await Teacher.findByIdAndUpdate(teacher, { $addToSet: { courses: course._id } });
     }
 
-    await Enrollment.updateMany(
-      { course: course._id, deleted: false },
-      { $set: { deleted: true } }
-    );
-    await Review.updateMany(
-      { course: course._id, deleted: false },
-      { $set: { deleted: true } }
-    );
-    await StudentReview.updateMany(
-      { course: course._id, deleted: false },
-      { $set: { deleted: true } }
-    );
-    await Course.findByIdAndUpdate(course._id, { $set: { enrolledStudents: [] } });
+    
 
     if (course.teacher) {
       const remaining = await Review.find({ teacher: course.teacher, deleted: false });
@@ -230,5 +218,82 @@ router.delete("/:id", authenticate, authorize("admin"), async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// Meetings management
+router.get("/:id/meetings", authenticate, async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).select("meetings totalMeetings deleted").populate("teacher", "user");
+    if (!course || course.deleted) {
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
+    const meetings = Array.isArray(course.meetings) ? course.meetings : [];
+    res.json({ success: true, data: { totalMeetings: course.totalMeetings || 0, meetings } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put(
+  "/:id/meetings",
+  authenticate,
+  authorize("dosen"),
+  [
+    body("number").isInt({ min: 1 }).withMessage("number must be >= 1"),
+    body("date").optional().isISO8601().toDate(),
+    body("startAt").optional().isISO8601().toDate(),
+    body("endAt").optional().isISO8601().toDate(),
+    body("ratingEnabled").optional().isBoolean(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+    try {
+      const course = await Course.findById(req.params.id).populate("teacher", "user");
+      if (!course || course.deleted) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+      const teacherUserId = course?.teacher?.user?.toString?.() || course?.teacher?.user;
+      if (!teacherUserId || teacherUserId.toString() !== req.userId) {
+        return res.status(403).json({ success: false, message: "Forbidden" });
+      }
+      const { number } = req.body;
+      const within = typeof course.totalMeetings === "number" ? number <= course.totalMeetings : true;
+      if (!within) {
+        return res.status(400).json({ success: false, message: "Nomor pertemuan melebihi totalMeetings" });
+      }
+      const payload = {
+        number,
+        ...(req.body.date !== undefined ? { date: req.body.date } : {}),
+        ...(req.body.startAt !== undefined ? { startAt: req.body.startAt } : {}),
+        ...(req.body.endAt !== undefined ? { endAt: req.body.endAt } : {}),
+        ...(req.body.ratingEnabled !== undefined ? { ratingEnabled: !!req.body.ratingEnabled } : {}),
+      };
+
+      if (payload.ratingEnabled) {
+        if (!payload.startAt || !payload.endAt) {
+          return res.status(400).json({ success: false, message: "startAt dan endAt wajib saat mengaktifkan rating" });
+        }
+        if (new Date(payload.endAt).getTime() <= new Date(payload.startAt).getTime()) {
+          return res.status(400).json({ success: false, message: "endAt harus setelah startAt" });
+        }
+      }
+      const meetings = Array.isArray(course.meetings) ? course.meetings : [];
+      const idx = meetings.findIndex((m) => Number(m.number) === Number(number));
+      if (idx >= 0) {
+        meetings[idx] = { ...meetings[idx].toObject?.() ?? meetings[idx], ...payload };
+      } else {
+        meetings.push({ number, date: payload.date, startAt: payload.startAt, endAt: payload.endAt, ratingEnabled: !!payload.ratingEnabled });
+      }
+      course.meetings = meetings;
+      await course.save();
+      const out = await Course.findById(course._id).select("meetings totalMeetings");
+      res.json({ success: true, message: "Meeting disimpan", data: out });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
 
 export default router;

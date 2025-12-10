@@ -32,20 +32,41 @@ const RatingPage = () => {
   const [toInput, setToInput] = useState("");
   const [meetingNumber, setMeetingNumber] = useState<number | undefined>(undefined);
   const [totalMeetings, setTotalMeetings] = useState<number>(12);
+  const [enabledMeetings, setEnabledMeetings] = useState<number[]>([]);
 
   const courseId = searchParams.get("courseId") || undefined;
+  const meetingParam = searchParams.get("meetingNumber");
   useEffect(() => {
     const fetchTotal = async () => {
       try {
-        if (courseId) {
-          const res = await fetchJson(`/api/courses/${courseId}`);
-          const tm = res?.data?.totalMeetings || res?.data?.data?.totalMeetings;
-          if (tm && typeof tm === "number") setTotalMeetings(tm);
+        if (!courseId) return;
+        const res = await fetchJson(`/api/courses/${courseId}/meetings`);
+        const tm = res?.data?.totalMeetings || res?.data?.data?.totalMeetings;
+        if (tm && typeof tm === "number") setTotalMeetings(tm);
+        const list = res?.data?.meetings || res?.data?.data?.meetings || [];
+        const now = Date.now();
+        const enabled = Array.isArray(list)
+          ? list
+              .filter((m: any) => {
+                if (!m?.ratingEnabled || typeof m?.number !== "number") return false;
+                const s = m?.startAt ? new Date(m.startAt).getTime() : undefined;
+                const e = m?.endAt ? new Date(m.endAt).getTime() : undefined;
+                return !!s && !!e && now >= s && now <= e;
+              })
+              .map((m: any) => Number(m.number))
+          : [];
+        setEnabledMeetings(enabled);
+        if (meetingParam && !isNaN(parseInt(meetingParam))) {
+          setMeetingNumber(parseInt(meetingParam));
+        } else if (enabled.length > 0) {
+          setMeetingNumber(enabled[0]);
+        } else {
+          setMeetingNumber(undefined);
         }
       } catch {}
     };
     fetchTotal();
-  }, [courseId]);
+  }, [courseId, meetingParam]);
 
   const isMahasiswaRatingDosen = ratingType === "dosen" && user?.role === "mahasiswa";
   const isMahasiswaRatingMahasiswa = ratingType === "teman" && user?.role === "mahasiswa";
@@ -470,6 +491,16 @@ const RatingPage = () => {
           toast.error("Teman tidak dipilih");
           return;
         }
+        if (isMahasiswaRatingMahasiswa) {
+          if (!courseId) {
+            toast.error("Course tidak terdeteksi untuk rating teman");
+            return;
+          }
+          if (enabledMeetings.length > 0 && !enabledMeetings.includes(Number(meetingNumber))) {
+            toast.error("Pertemuan belum dibuat atau belum diaktifkan oleh dosen");
+            return;
+          }
+        }
         if (isDosenRatingMahasiswa) {
           const teacherCats = [
             "Communication",
@@ -607,9 +638,13 @@ const RatingPage = () => {
               <SelectValue placeholder="Pertemuan ke-?" />
             </SelectTrigger>
             <SelectContent>
-              {Array.from({ length: totalMeetings }).map((_, i) => (
-                <SelectItem key={i + 1} value={`${i + 1}`}>Pertemuan ke-{i + 1}</SelectItem>
-              ))}
+              {enabledMeetings.length > 0
+                ? enabledMeetings.map((num) => (
+                    <SelectItem key={num} value={`${num}`}>Pertemuan ke-{num}</SelectItem>
+                  ))
+                : Array.from({ length: totalMeetings }).map((_, i) => (
+                    <SelectItem key={i + 1} value={`${i + 1}`}>Pertemuan ke-{i + 1}</SelectItem>
+                  ))}
             </SelectContent>
           </Select>
           {!meetingNumber && (

@@ -38,64 +38,84 @@ const resetAndSeed = async () => {
       new User({ name: "Administrator", email: "admin@edurate.com", password: "password", role: "admin", nim_nip: "ADMIN001", institution: institutions[0]._id }),
       new User({ name: "Admin Kedua", email: "admin2@edurate.com", password: "password", role: "admin", nim_nip: "ADMIN002", institution: institutions[1]._id }),
       new User({ name: "Admin Ketiga", email: "admin3@edurate.com", password: "password", role: "admin", nim_nip: "ADMIN003", institution: institutions[2]._id }),
-      new User({ name: "Admin Keempat", email: "admin4@edurate.com", password: "password", role: "admin", nim_nip: "ADMIN004", institution: institutions[0]._id }),
     ];
     for (const a of admins) await a.save();
 
-    const lecturersUsers = [
-      new User({ name: "Dosen Demo", email: "dosen@edurate.com", password: "password", role: "dosen", nim_nip: "NIP001", institution: institutions[0]._id, department: "Informatika" }),
-      new User({ name: "Bu Ratna", email: "ratna@edurate.com", password: "password", role: "dosen", nim_nip: "NIP002", institution: institutions[0]._id, department: "Sistem Informasi" }),
-      new User({ name: "Pak Budi", email: "budi@edurate.com", password: "password", role: "dosen", nim_nip: "NIP003", institution: institutions[1]._id, department: "Teknik Elektro" }),
-      new User({ name: "Pak Andi", email: "andi@edurate.com", password: "password", role: "dosen", nim_nip: "NIP004", institution: institutions[2]._id, department: "Teknik Mesin" }),
-      new User({ name: "Bu Sari", email: "sari@edurate.com", password: "password", role: "dosen", nim_nip: "NIP005", institution: institutions[2]._id, department: "Teknik Kimia" }),
-      new User({ name: "Bu Lina", email: "lina@edurate.com", password: "password", role: "dosen", nim_nip: "NIP006", institution: institutions[0]._id, department: "Matematika" }),
-      new User({ name: "Pak Yusuf", email: "yusuf@edurate.com", password: "password", role: "dosen", nim_nip: "NIP007", institution: institutions[1]._id, department: "Fisika" }),
-      new User({ name: "Bu Maya", email: "maya@edurate.com", password: "password", role: "dosen", nim_nip: "NIP008", institution: institutions[1]._id, department: "Statistika" }),
-      new User({ name: "Pak Rudi", email: "rudi@edurate.com", password: "password", role: "dosen", nim_nip: "NIP009", institution: institutions[2]._id, department: "Teknik Sipil" }),
-      new User({ name: "Bu Nisa", email: "nisa@edurate.com", password: "password", role: "dosen", nim_nip: "NIP010", institution: institutions[0]._id, department: "Biologi" }),
+    const makePhone = (idx) => `0812${String(100000 + idx).slice(-6)}`;
+    const LECTURER_COUNT = 24; // satu dosen per kelas
+    const lecturerDept = [
+      "Informatika",
+      "Sistem Informasi",
+      "Teknik Elektro",
+      "Teknik Mesin",
+      "Teknik Kimia",
+      "Matematika",
+      "Fisika",
+      "Statistika",
+      "Teknik Sipil",
+      "Biologi",
+      "Kimia",
+      "Ekonomi",
+      "Manajemen",
+      "Akuntansi",
+      "Bahasa Inggris",
+      "Desain Produk",
+      "Arsitektur",
+      "Ilmu Komputer",
+      "Data Science",
+      "Keamanan Informasi",
+      "Jaringan",
+      "Pemrograman",
+      "AI",
+      "Sistem Cerdas",
     ];
+    const lecturersUsers = [];
+    for (let i = 0; i < LECTURER_COUNT; i++) {
+      const inst = institutions[i % institutions.length]._id;
+      const name = `Dosen ${i + 1}`;
+      const email = `dosen${i + 1}@edurate.com`;
+      const nip = `NIP${String(i + 1).padStart(3, "0")}`;
+      lecturersUsers.push(new User({ name, email, password: "password", role: "dosen", nim_nip: nip, institution: inst, department: lecturerDept[i % lecturerDept.length], phone: makePhone(i + 1) }));
+    }
     for (const u of lecturersUsers) await u.save();
 
-    const students = [
-      new User({ name: "Mahasiswa Satu", email: "mahasiswa1@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM001", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Dua", email: "mahasiswa2@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM002", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Tiga", email: "mahasiswa3@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM003", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Empat", email: "mahasiswa4@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM004", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Lima", email: "mahasiswa5@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM005", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Enam", email: "mahasiswa6@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM006", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Tujuh", email: "mahasiswa7@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM007", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Delapan", email: "mahasiswa8@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM008", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Sembilan", email: "mahasiswa9@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM009", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Sepuluh", email: "mahasiswa10@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM010", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Sebelas", email: "mahasiswa11@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM011", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Dua Belas", email: "mahasiswa12@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM012", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Tiga Belas", email: "mahasiswa13@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM013", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Empat Belas", email: "mahasiswa14@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM014", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Lima Belas", email: "mahasiswa15@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM015", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Enam Belas", email: "mahasiswa16@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM016", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Tujuh Belas", email: "mahasiswa17@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM017", institution: institutions[1]._id }),
-      new User({ name: "Mahasiswa Delapan Belas", email: "mahasiswa18@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM018", institution: institutions[2]._id }),
-      new User({ name: "Mahasiswa Sembilan Belas", email: "mahasiswa19@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM019", institution: institutions[0]._id }),
-      new User({ name: "Mahasiswa Dua Puluh", email: "mahasiswa20@edurate.com", password: "password", role: "mahasiswa", nim_nip: "NIM020", institution: institutions[1]._id }),
-    ];
+    const GROUPS = 3;
+    const STUDENTS_PER_CLASS = 24;
+    const CLASSES_PER_STUDENT = 8;
+    const students = [];
+    for (let g = 0; g < GROUPS; g++) {
+      for (let i = 0; i < STUDENTS_PER_CLASS; i++) {
+        const idx = g * STUDENTS_PER_CLASS + i + 1;
+        const name = `Mahasiswa ${idx}`;
+        const email = `mahasiswa${idx}@edurate.com`;
+        const nim = `NIM${String(idx).padStart(3, "0")}`;
+        const inst = institutions[g % institutions.length]._id;
+        students.push(new User({ name, email, password: "password", role: "mahasiswa", nim_nip: nim, institution: inst }));
+      }
+    }
     for (const s of students) await s.save();
 
-    const teachers = [
-      new Teacher({ name: lecturersUsers[0].name, user: lecturersUsers[0]._id, institution: institutions[0]._id, department: "Informatika" }),
-      new Teacher({ name: lecturersUsers[1].name, user: lecturersUsers[1]._id, institution: institutions[0]._id, department: "Sistem Informasi" }),
-      new Teacher({ name: lecturersUsers[2].name, user: lecturersUsers[2]._id, institution: institutions[1]._id, department: "Teknik Elektro" }),
-      new Teacher({ name: lecturersUsers[3].name, user: lecturersUsers[3]._id, institution: institutions[2]._id, department: "Teknik Mesin" }),
-      new Teacher({ name: lecturersUsers[4].name, user: lecturersUsers[4]._id, institution: institutions[2]._id, department: "Teknik Kimia" }),
-    ];
+    const teachers = [];
+    for (let i = 0; i < lecturersUsers.length; i++) {
+      const u = lecturersUsers[i];
+      const inst = u.institution;
+      teachers.push(new Teacher({ name: u.name, user: u._id, institution: inst, department: u.department }));
+    }
     for (const t of teachers) await t.save();
 
-    const courses = [
-      new Course({ name: "Algoritma dan Pemrograman", code: "IF101", semester: 2, institution: institutions[0]._id, teacher: teachers[0]._id, schedule: "Senin, 08:00 - 10:00", room: "Lab 301", totalMeetings: 16, enrolledStudents: [students[0]._id, students[1]._id, students[6]._id, students[9]._id] }),
-      new Course({ name: "Basis Data", code: "IF201", semester: 3, institution: institutions[0]._id, teacher: teachers[1]._id, schedule: "Rabu, 13:00 - 15:00", room: "Kelas B2", totalMeetings: 16, enrolledStudents: [students[11]._id, students[12]._id] }),
-      new Course({ name: "Jaringan Komputer", code: "IF301", semester: 4, institution: institutions[1]._id, teacher: teachers[2]._id, schedule: "Kamis, 09:00 - 11:00", room: "Kelas C1", totalMeetings: 16, enrolledStudents: [students[2]._id, students[3]._id, students[7]._id] }),
-      new Course({ name: "Termodinamika", code: "ME101", semester: 2, institution: institutions[2]._id, teacher: teachers[3]._id, schedule: "Selasa, 10:00 - 12:00", room: "Kelas M1", totalMeetings: 16, enrolledStudents: [students[4]._id, students[8]._id, students[13]._id] }),
-      new Course({ name: "Reaksi Kimia", code: "CH201", semester: 3, institution: institutions[2]._id, teacher: teachers[4]._id, schedule: "Jumat, 08:00 - 10:00", room: "Lab Kimia", totalMeetings: 16, enrolledStudents: [students[14]._id, students[15]._id] }),
-    ];
+    const courses = [];
+    let teacherIdx = 0;
+    for (let g = 0; g < GROUPS; g++) {
+      const groupStudents = students.slice(g * STUDENTS_PER_CLASS, (g + 1) * STUDENTS_PER_CLASS);
+      for (let k = 0; k < CLASSES_PER_STUDENT; k++) {
+        const code = `G${g + 1}C${k + 1}`;
+        const name = `Kelas G${g + 1} - ${k + 1}`;
+        const inst = institutions[g % institutions.length]._id;
+        const teacher = teachers[teacherIdx % teachers.length]._id;
+        teacherIdx++;
+        courses.push(new Course({ name, code, semester: 3, institution: inst, teacher, schedule: "Senin, 08:00 - 10:00", room: `R-${g + 1}${k + 1}`, totalMeetings: 16, enrolledStudents: groupStudents.map((s) => s._id) }));
+      }
+    }
     for (const c of courses) await c.save();
 
     const enrollDocs = [];
@@ -125,13 +145,10 @@ const resetAndSeed = async () => {
     const reviewDocs = [];
     for (let meeting = 1; meeting <= 16; meeting++) {
       for (const c of courses) {
-        const tIdx = teachers.findIndex((t) => String(t._id) === String(c.teacher));
         const base = 3 + (meeting % 2);
         for (const sid of c.enrolledStudents) {
           reviewDocs.push({ user: sid, teacher: c.teacher, course: c._id, meetingNumber: meeting, ratings: makeRatings(base), comment: teacherComments[Math.floor(Math.random() * teacherComments.length)] });
         }
-        const lecturerRater = lecturersUsers[(tIdx + 1) % lecturersUsers.length];
-        reviewDocs.push({ user: lecturerRater._id, teacher: c.teacher, course: c._id, meetingNumber: meeting, ratings: makeRatings(3), comment: teacherComments[Math.floor(Math.random() * teacherComments.length)] });
       }
     }
     await Review.create(reviewDocs);
@@ -156,6 +173,7 @@ const resetAndSeed = async () => {
       "Solusi yang ditawarkan realistis dan efektif."
     ];
     const studentReviewDocs = [];
+    const uniqPairs = new Set();
     courses.forEach((c, cIdx) => {
       for (let meeting = 1; meeting <= 16; meeting++) {
         const uniqueMeeting = ((meeting + cIdx - 1) % 16) + 1;
@@ -164,13 +182,21 @@ const resetAndSeed = async () => {
           const from = enrolled[i];
           const to = enrolled[(i + 1) % enrolled.length];
           if (from !== to) {
-            studentReviewDocs.push({ from, to, course: c._id, meetingNumber: uniqueMeeting, ratings: makeRatings(3), comment: peerComments[Math.floor(Math.random() * peerComments.length)] });
+            const key = `${from}:${to}:${uniqueMeeting}`;
+            if (!uniqPairs.has(key)) {
+              uniqPairs.add(key);
+              studentReviewDocs.push({ from, to, course: c._id, meetingNumber: uniqueMeeting, ratings: makeRatings(3), comment: peerComments[Math.floor(Math.random() * peerComments.length)] });
+            }
           }
         }
         const teacherUserId = lecturersUsers.find((u) => String(u._id) === String(teachers.find((t) => String(t._id) === String(c.teacher))?.user))?._id;
         if (teacherUserId) {
           for (const sid of c.enrolledStudents) {
-            studentReviewDocs.push({ from: teacherUserId, to: sid, course: c._id, meetingNumber: uniqueMeeting, teacherRatings: makeRatings(4), comment: peerComments[Math.floor(Math.random() * peerComments.length)] });
+            const key = `${String(teacherUserId)}:${String(sid)}:${uniqueMeeting}`;
+            if (!uniqPairs.has(key)) {
+              uniqPairs.add(key);
+              studentReviewDocs.push({ from: teacherUserId, to: sid, course: c._id, meetingNumber: uniqueMeeting, teacherRatings: makeRatings(4), comment: peerComments[Math.floor(Math.random() * peerComments.length)] });
+            }
           }
         }
       }

@@ -38,6 +38,15 @@ const courseSchema = new mongoose.Schema(
       default: 12,
       min: 1,
     },
+    meetings: [
+      {
+        number: { type: Number, min: 1 },
+        date: { type: Date },
+        startAt: { type: Date },
+        endAt: { type: Date },
+        ratingEnabled: { type: Boolean, default: false },
+      },
+    ],
     enrolledStudents: [
       {
         type: mongoose.Schema.Types.ObjectId,
