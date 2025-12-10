@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +21,9 @@ const LoginPage = () => {
     const success = await login(nim_nip, password);
     if (success) {
       toast.success("Login berhasil!");
-      navigate("/dashboard");
+      const state = location.state as any;
+      const to = state?.from || "/dashboard";
+      navigate(to, { replace: true });
     } else {
       toast.error("NIM/NIP atau password salah!");
     }
